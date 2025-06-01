@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../model/filme.dart';
-import 'package:smooth_star_rating_null_safety/smooth_star_rating_null_safety.dart';
 
 class DetalhesFilme extends StatelessWidget {
   final Filme filme;
@@ -17,11 +17,7 @@ class DetalhesFilme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(filme.titulo),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: Text(filme.titulo)),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,11 +58,11 @@ class DetalhesFilme extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.broken_image,
+                          Icons.broken_image_outlined,
                           size: 100,
                           color: Colors.grey[400],
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'Não foi possível carregar a imagem.',
                           style: TextStyle(color: Colors.grey[600]),
@@ -101,14 +97,17 @@ class DetalhesFilme extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   IgnorePointer(
-                    child: SmoothStarRating(
+                    child: RatingBarIndicator(
                       rating: filme.nota,
-                      size: 28,
-                      color: Colors.amber,
-                      borderColor: Colors.amber,
-                      starCount: 5,
-                      allowHalfRating: true,
-                      spacing: 2.0,
+                      itemBuilder:
+                          (context, index) => const Icon(
+                            Icons.star_rounded,
+                            color: Colors.amber,
+                          ),
+                      itemCount: 5,
+                      itemSize: 28.0,
+                      unratedColor: Colors.amber.withAlpha(100),
+                      direction: Axis.horizontal,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -121,6 +120,7 @@ class DetalhesFilme extends StatelessWidget {
                     filme.descricao,
                     style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
