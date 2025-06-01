@@ -16,5 +16,9 @@ class FilmeController{
       faixa_etaria: faixaEtaria, duracao: duracao, nota: nota, descricao: descricao, ano: ano));
   }
 
+  void atualizar(Filme filmeAtualizado) {
+    _service.atualizar(filmeAtualizado);
+  }
+
   void deletarFilme(Filme filme) => _service.deletarFilme(filme);
 }

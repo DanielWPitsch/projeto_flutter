@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:smooth_star_rating_null_safety/smooth_star_rating_null_safety.dart';
 import '../controller/filme_controller.dart';
 import '../model/filme.dart';
 
@@ -26,13 +26,38 @@ class _CadastrarFilmeState extends State<CadastrarFilme> {
   final List<String> _faixasEtarias = ['Livre', '10', '12', '14', '16', '18'];
   String _faixaEtariaSelecionada = 'Livre';
 
-  double _nota = 0; // Variável para armazenar a nota selecionada
+  double _nota = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.filme != null) {
+      _edtTitulo.text = widget.filme!.titulo;
+      _edtUrlImagem.text = widget.filme!.url_imagem;
+      _edtGenero.text = widget.filme!.genero;
+      
+      // Corrigindo a faixa etária para compatibilidade com o Dropdown
+      String faixaEtaria = widget.filme!.faixa_etaria;
+      if (faixaEtaria.contains('anos')) {
+        faixaEtaria = faixaEtaria.replaceAll(' anos', '').trim();
+      }
+      _faixaEtariaSelecionada = _faixasEtarias.contains(faixaEtaria) 
+          ? faixaEtaria 
+          : 'Livre';
+      
+      _edtDuracaoHoras.text = widget.filme!.duracao.inHours.toString();
+      _edtDuracaoMinutos.text = (widget.filme!.duracao.inMinutes.remainder(60)).toString();
+      _nota = widget.filme!.nota;
+      _edtDescricao.text = widget.filme!.descricao;
+      _edtAno.text = widget.filme!.ano.toString();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Cadastrar Filme"),
+        title: Text(widget.filme == null ? "Cadastrar Filme" : "Editar Filme"),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -113,7 +138,6 @@ class _CadastrarFilmeState extends State<CadastrarFilme> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Widget de avaliação por estrelas
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -123,24 +147,20 @@ class _CadastrarFilmeState extends State<CadastrarFilme> {
                   ),
                   const SizedBox(height: 8),
                   Align(
-                    alignment: Alignment.centerLeft, // Força o alinhamento à esquerda
-                    child: RatingBar.builder(
-                      initialRating: _nota,
-                      minRating: 0,
-                      direction: Axis.horizontal,
+                    alignment: Alignment.centerLeft,
+                    child:SmoothStarRating(
+                      rating: _nota,
+                      size: 24,
                       allowHalfRating: true,
-                      itemCount: 5,
-                      itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      itemBuilder: (context, _) => const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                      ),
-                      onRatingUpdate: (rating) {
+                      starCount: 5,
+                      color: Colors.amber,
+                      borderColor: Colors.amber,
+                      onRatingChanged: (rating) {
                         setState(() {
                           _nota = rating;
                         });
                       },
-                    ),
+                    )
                   ),
                   Text(
                     _nota == 0 ? "Sem avaliação" : "Nota: $_nota",
@@ -171,28 +191,77 @@ class _CadastrarFilmeState extends State<CadastrarFilme> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
           if (_key.currentState!.validate()) {
             try {
-              _filmeController.adicionar(
-                DateTime.now().millisecondsSinceEpoch, // id
-                _edtTitulo.text,                      // titulo
-                _edtUrlImagem.text,                   // url_imagem
-                _edtGenero.text,                     // genero
-                _edtFaixaEtaria.text,                 // faixa_etaria
-                Duration(                             // duracao
-                  hours: int.parse(_edtDuracaoHoras.text),
-                  minutes: int.parse(_edtDuracaoMinutos.text),
-                ),
-                _nota,                              // nota (agora vem do RatingBar)
-                _edtDescricao.text,                  // descricao
-                int.parse(_edtAno.text),             // ano
-              );
+              // Validação da nota
+              if (_nota < 0 || _nota > 5) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("A nota deve estar entre 0 e 5"))
+                );
+                return;
+              }
 
-              Navigator.pop(context);
+              // Validação da duração
+              final horas = int.tryParse(_edtDuracaoHoras.text) ?? 0;
+              final minutos = int.tryParse(_edtDuracaoMinutos.text) ?? 0;
+              if (horas < 0 || minutos < 0 || (horas == 0 && minutos == 0)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Duração inválida"))
+                );
+                return;
+              }
+
+              // Formatação da faixa etária
+              final faixaEtariaCompleta = _faixaEtariaSelecionada == 'Livre' 
+                  ? 'Livre' 
+                  : '$_faixaEtariaSelecionada anos';
+
+              // Validação do ano
+              final ano = int.tryParse(_edtAno.text) ?? 0;
+              if (ano < 1888 || ano > DateTime.now().year + 1) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Ano inválido"))
+                );
+                return;
+              }
+
+              // Operação de adicionar/editar
+              if (widget.filme == null) {
+                _filmeController.adicionar(
+                  DateTime.now().millisecondsSinceEpoch,
+                  _edtTitulo.text.trim(),
+                  _edtUrlImagem.text.trim(),
+                  _edtGenero.text.trim(),
+                  faixaEtariaCompleta,
+                  Duration(hours: horas, minutes: minutos),
+                  _nota,
+                  _edtDescricao.text.trim(),
+                  ano,
+                );
+              } else {
+                final filmeAtualizado = Filme(
+                  id: widget.filme!.id,
+                  titulo: _edtTitulo.text.trim(),
+                  url_imagem: _edtUrlImagem.text.trim(),
+                  genero: _edtGenero.text.trim(),
+                  faixa_etaria: faixaEtariaCompleta,
+                  duracao: Duration(hours: horas, minutes: minutos),
+                  nota: _nota,
+                  descricao: _edtDescricao.text.trim(),
+                  ano: ano,
+                );
+                _filmeController.atualizar(filmeAtualizado);
+              }
+
+              // Fecha a tela após sucesso
+              if (mounted) {
+                Navigator.pop(context);
+              }
+              
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Erro: ${e.toString()}"))
+                SnackBar(content: Text("Erro ao salvar: ${e.toString()}"))
               );
             }
           }

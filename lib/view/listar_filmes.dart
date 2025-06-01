@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../controller/filme_controller.dart';
 import '../model/filme.dart';
 import 'cadastrar_filme.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:smooth_star_rating_null_safety/smooth_star_rating_null_safety.dart';
 
 class ListarFilmes extends StatefulWidget {
   const ListarFilmes({super.key});
@@ -196,20 +196,16 @@ class _ListarFilmesState extends State<ListarFilmes> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      RatingBar.builder(
-                        initialRating: filme.nota,
-                        minRating: 0,
-                        direction: Axis.horizontal,
+                      SmoothStarRating(
+                        rating: filme.nota,
+                        size: 20,
+                        color: Colors.amber,
+                        borderColor: Colors.amber,
+                        starCount: 5,
                         allowHalfRating: true,
-                        itemCount: 5,
-                        itemSize: 20,
-                        ignoreGestures: true,
-                        itemBuilder: (context, _) => const Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                        ),
-                        onRatingUpdate: (rating) {},
-                      ),
+                        spacing: 2.0,
+                        onRatingChanged: null, // Isso torna o widget readonly
+                      )
                     ],
                   ),
                 ),

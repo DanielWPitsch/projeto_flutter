@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../model/filme.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:smooth_star_rating_null_safety/smooth_star_rating_null_safety.dart';
 
 class DetalhesFilme extends StatelessWidget {
   final Filme filme;
@@ -54,15 +54,16 @@ class DetalhesFilme extends StatelessWidget {
                     style: TextStyle(color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 16),
-                  RatingBarIndicator(
-                    rating: filme.nota,
-                    itemBuilder: (context, index) => const Icon(
-                      Icons.star,
+                  IgnorePointer(
+                    child: SmoothStarRating(
+                      rating: filme.nota,
+                      size: 24,
                       color: Colors.amber,
+                      borderColor: Colors.amber,
+                      starCount: 5,
+                      allowHalfRating: true,
+                      spacing: 2.0,
                     ),
-                    itemCount: 5,
-                    itemSize: 24.0,
-                    direction: Axis.horizontal,
                   ),
                   const SizedBox(height: 16),
                   const Text(
