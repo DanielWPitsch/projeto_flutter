@@ -16,13 +16,39 @@ class MyApp extends StatelessWidget {
       title: 'App de Filmes',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.blue, width: 2.0),
+          ),
+        ),
       ),
       home: const ListarFilmes(),
       routes: {
         '/detalhes': (context) {
-          final filme = ModalRoute.of(context)!.settings.arguments as Filme;
-          return DetalhesFilme(filme: filme);
+          final filme = ModalRoute.of(context)?.settings.arguments as Filme?;
+          if (filme != null) {
+            return DetalhesFilme(filme: filme);
+          }
+          return Scaffold(
+            appBar: AppBar(title: const Text("Erro")),
+            body: const Center(child: Text("Filme não encontrado.")),
+          );
         },
       },
     );

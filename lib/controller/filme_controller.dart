@@ -1,24 +1,42 @@
 import '../model/filme.dart';
-import '../service/filme_service.dart';
+import '../service/filme_api_service.dart';
 
-class FilmeController{
+class FilmeController {
+  final _apiService = FilmeApiService();
 
-  final _service = FilmeService();
-  //instancia de filme_service onde tem a lista de todos os filmes
-
-  List<Filme> getFilmes(){
-    return _service.filmes; //manda a lista pelo controller
+  Future<List<Filme>> getFilmes() async {
+    return await _apiService.getFilmes();
   }
 
-  void adicionar(int id, String titulo, String urlImagem, String genero, String faixaEtaria,
-      Duration duracao, double nota, String descricao, int ano){
-    _service.adicionar(Filme(id: id, titulo: titulo, url_imagem: urlImagem, genero: genero,
-      faixa_etaria: faixaEtaria, duracao: duracao, nota: nota, descricao: descricao, ano: ano));
+  Future<Filme> adicionar(
+    String titulo,
+    String urlImagem,
+    String genero,
+    String faixaEtaria,
+    Duration duracao,
+    double nota,
+    String descricao,
+    int ano,
+  ) async {
+    Filme novoFilme = Filme(
+      id: 0,
+      titulo: titulo,
+      url_imagem: urlImagem,
+      genero: genero,
+      faixa_etaria: faixaEtaria,
+      duracao: duracao,
+      nota: nota,
+      descricao: descricao,
+      ano: ano,
+    );
+    return await _apiService.adicionarFilme(novoFilme);
   }
 
-  void atualizar(Filme filmeAtualizado) {
-    _service.atualizar(filmeAtualizado);
+  Future<Filme> atualizar(Filme filmeAtualizado) async {
+    return await _apiService.atualizarFilme(filmeAtualizado);
   }
 
-  void deletarFilme(Filme filme) => _service.deletarFilme(filme);
+  Future<void> deletarFilme(Filme filme) async {
+    await _apiService.deletarFilme(filme.id);
+  }
 }

@@ -10,15 +10,20 @@ class ListarFilmes extends StatefulWidget {
   @override
   State<ListarFilmes> createState() => _ListarFilmesState();
 }
+
 class _ListarFilmesState extends State<ListarFilmes> {
   final _filmesController = FilmeController();
-  List<Filme> _filmes = [];
+  late Future<List<Filme>> _filmesFuture;
 
   @override
   void initState() {
     super.initState();
+    _loadFilmes();
+  }
+
+  void _loadFilmes() {
     setState(() {
-      _filmes = _filmesController.getFilmes();
+      _filmesFuture = _filmesController.getFilmes();
     });
   }
 
@@ -81,25 +86,24 @@ class _ListarFilmesState extends State<ListarFilmes> {
                 leading: const Icon(Icons.info_outline),
                 title: const Text("Ver Detalhes"),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(context); // Close BottomSheet
                   Navigator.pushNamed(context, '/detalhes', arguments: filme);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.edit),
                 title: const Text("Editar Filme"),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
+                onTap: () async {
+                  Navigator.pop(context); // Close BottomSheet
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => CadastrarFilme(filme: filme),
                     ),
-                  ).then((value) {
-                    setState(() {
-                      _filmes = _filmesController.getFilmes();
-                    });
-                  });
+                  );
+                  if (result == true) {
+                    _loadFilmes(); // Refresh list
+                  }
                 },
               ),
             ],
@@ -116,11 +120,9 @@ class _ListarFilmesState extends State<ListarFilmes> {
     return "$hours h $minutes m";
   }
 
-  Widget buildItemList(int index) {
-    final filme = _filmes[index];
-
+  Widget buildItemList(Filme filme) {
     return Dismissible(
-      key: Key(filme.titulo + index.toString()),
+      key: Key(filme.id.toString()),
       direction: DismissDirection.endToStart,
       background: Container(
         color: Colors.red,
@@ -128,15 +130,23 @@ class _ListarFilmesState extends State<ListarFilmes> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      onDismissed: (direction) {
-        setState(() {
-          _filmesController.deletarFilme(filme);
-          _filmes = _filmesController.getFilmes();
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${filme.titulo} foi removido.')),
-        );
+      onDismissed: (direction) async {
+        try {
+          await _filmesController.deletarFilme(filme);
+          _loadFilmes();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${filme.titulo} foi removido.')),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Erro ao remover ${filme.titulo}: $e')),
+            );
+            _loadFilmes();
+          }
+        }
       },
       child: InkWell(
         onTap: () => _mostrarOpcoes(context, filme),
@@ -157,6 +167,9 @@ class _ListarFilmesState extends State<ListarFilmes> {
                   image: DecorationImage(
                     image: NetworkImage(filme.url_imagem),
                     fit: BoxFit.cover,
+                    onError:
+                        (exception, stackTrace) =>
+                            const Icon(Icons.broken_image, size: 50),
                   ),
                 ),
               ),
@@ -166,34 +179,24 @@ class _ListarFilmesState extends State<ListarFilmes> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              filme.titulo,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        filme.titulo,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         "${filme.genero} • ${filme.ano}",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         formatDuration(filme.duracao),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 8),
                       SmoothStarRating(
@@ -204,8 +207,7 @@ class _ListarFilmesState extends State<ListarFilmes> {
                         starCount: 5,
                         allowHalfRating: true,
                         spacing: 2.0,
-                        onRatingChanged: null, // Isso torna o widget readonly
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -223,10 +225,7 @@ class _ListarFilmesState extends State<ListarFilmes> {
       appBar: AppBar(
         title: const Text("Filmes"),
         backgroundColor: Colors.blue,
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-        ),
+        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
         actions: [
           IconButton(
             icon: Container(
@@ -248,22 +247,47 @@ class _ListarFilmesState extends State<ListarFilmes> {
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: _filmes.length,
-        itemBuilder: (context, index) {
-          return buildItemList(index);
+      body: FutureBuilder<List<Filme>>(
+        future: _filmesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text("Erro ao carregar filmes: ${snapshot.error}"),
+            );
+          } else if (snapshot.hasData) {
+            final filmes = snapshot.data!;
+            if (filmes.isEmpty) {
+              return const Center(child: Text("Nenhum filme cadastrado."));
+            }
+            return ListView.builder(
+              itemCount: filmes.length,
+              itemBuilder: (context, index) {
+                return buildItemList(filmes[index]);
+              },
+            );
+          } else {
+            return const Center(child: Text("Nenhum filme encontrado."));
+          }
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) {
-            return const CadastrarFilme();
-          })).then((value) {
-            setState(() {
-              _filmes = _filmesController.getFilmes();
-            });
-          });
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) {
+                return const CadastrarFilme();
+              },
+            ),
+          );
+          if (result == true) {
+            _loadFilmes(); // Refresh list
+          }
         },
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
     );
